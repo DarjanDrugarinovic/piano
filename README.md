@@ -18,12 +18,15 @@ Add a song by adding an entry to `SONGS` in `site/index.html` (notes are key nam
 
 ## Publishing
 
-Hosted on Cloudflare Pages (project `darjandrugarinovic-piano`), deployed by hand from a PC
-where `wrangler` is logged in. Pushing to `main` doesn't publish anything. From the repo root:
+Hosted on Cloudflare Pages (project `darjandrugarinovic-piano`). **Every push to `main` that
+touches `site/`, `scripts/` or the workflow publishes it** through GitHub Actions
+(`.github/workflows/deploy-pages.yml`); it can also be run by hand from the Actions tab.
+The job first runs `scripts/verify-site.mjs`, which stops the deploy if the 404 page, headers,
+robots.txt or sitemap are missing or wrong.
 
-```bash
-npx --yes wrangler@4.158.0 pages deploy site --project-name=darjandrugarinovic-piano --branch=main
-```
+The workflow uses two repo secrets: `CLOUDFLARE_API_TOKEN` (Cloudflare token
+`darjandrugarinovic-piano-pages-deploy`, only the Cloudflare Pages Edit permission) and
+`CLOUDFLARE_ACCOUNT_ID`.
 
-Only `site/` goes online (`index.html`, `404.html`, `_headers`). How it's hosted is recorded in
-the contabo repo, `documentation/projekti/piano.md`.
+Only `site/` goes online. How it's hosted is recorded in the contabo repo,
+`documentation/projekti/piano.md`.

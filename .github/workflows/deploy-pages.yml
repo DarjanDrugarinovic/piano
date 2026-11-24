@@ -1,0 +1,64 @@
+# Publishes site/ to Cloudflare Pages (project darjandrugarinovic-piano), live at
+# https://piano.darjandrugarinovic.com. The site is plain HTML, so there's no build:
+# checkout, check, upload with wrangler.
+name: deploy-pages
+
+on:
+  workflow_dispatch: # manual deploy from the Actions tab
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "scripts/**"
+      - ".github/workflows/deploy-pages.yml"
+
+# Stopping mid-upload would leave half a version online, so a running deploy finishes
+# instead of being cancelled by the next one.
+concurrency:
+  group: deploy-pages
+  cancel-in-progress: false
+
+env:
+  PROJECT: darjandrugarinovic-piano
+  # Pinned: "@latest" could change behaviour without any change in this repo.
+  WRANGLER: wrangler@4.158.0
+
+jobs:
+  deploy:
+    name: deploy-pages
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      # Fails before anything goes to Cloudflare (missing 404 page, stray noindex, headers).
+      - name: Verify
+        run: node scripts/verify-site.mjs
+
+      - name: Deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+
+          # An empty secret gives the same 10000/9109 output as a bad token, so check first.
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "::error::Secret CLOUDFLARE_API_TOKEN is not set in the repo."
+            exit 1
+          fi
+          if [ -z "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            echo "::error::Secret CLOUDFLARE_ACCOUNT_ID is not set in the repo."
+            exit 1
+          fi
+
+          # The Pages project already exists (created 2026-11-24 with --force). There's no
+          # "pages project create" step on purpose: on wrangler >= 4.158 create can delegate to
+          # Workers and publish a Worker instead (see contabo docs, deploy/cloudflare-pages.md).
+          # If the project is ever deleted, this deploy fails with 'does not exist'; recreate it
+          # by hand with "pages project create ... --production-branch=main --force".
+          #
+          # Error 10000 here means the token is wrong: rolled (the panel still says Active; only
+          # its "Last used" column shows it), revoked, or missing the Cloudflare Pages Edit right.
+          npx --yes "$WRANGLER" pages deploy site --project-name="$PROJECT" --branch=main
