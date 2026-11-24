@@ -87,6 +87,24 @@
   @keyframes glow { 50% { transform: translateY(-6px) scale(1.03); } }
   @keyframes bounce { to { transform: translate(-50%, -10px); } }
 
+  /* Upright phone or tablet: eight thin strips would be too small for little fingers, so the
+     keys become a 2-column grid of big tiles (C D / E F / G A / B C), in playing order. */
+  @media (orientation: portrait) {
+    #piano {
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(4, 1fr);
+      gap: 12px; padding: 8px 12px max(12px, env(safe-area-inset-bottom));
+    }
+    #songs { flex-wrap: nowrap; gap: 6px; }
+    .song { width: calc((100vw - 54px) / 6); height: calc((100vw - 54px) / 6); max-width: 92px; max-height: 92px; border-radius: 16px; }
+    #progress { gap: 4px; }
+    .dot { width: 9px; height: 9px; }
+    .key { border-radius: 26px; align-items: center; padding: 0 0 10px; }
+    .key .blob { width: auto; height: 55%; }
+    /* The pointer sits inside the tile, so it doesn't cover the tile above */
+    body.song-mode .key.target::before { top: 6px; left: auto; right: 14px; transform: none; animation-name: bounce-in; }
+  }
+  @keyframes bounce-in { to { transform: translateY(8px); } }
+
   /* Flying stars after a right key, confetti at the end */
   .spark {
     position: fixed; pointer-events: none; font-size: 34px;
